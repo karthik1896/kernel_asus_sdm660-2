@@ -62,6 +62,7 @@
 #include <linux/sched/rt.h>
 #include <linux/page_owner.h>
 #include <linux/kthread.h>
+#include <linux/simple_lmk.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -3131,6 +3132,16 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	enum migrate_mode migration_mode = MIGRATE_ASYNC;
 	bool deferred_compaction = false;
 	int contended_compaction = COMPACT_CONTENDED_NONE;
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+	static const struct sched_param oom_prio = {
+		.sched_priority = MAX_RT_PRIO - 2
+	};
+	struct sched_param orig_prio = {
+		.sched_priority = current->rt_priority
+	};
+	unsigned int orig_policy = current->policy;
+	bool started_slmk = false;
+#endif
 
 	/*
 	 * In the slowpath, we sanity check order to avoid ever trying to
@@ -3219,6 +3230,15 @@ retry:
 	/* Avoid allocations with no watermarks from looping endlessly */
 	if (test_thread_flag(TIF_MEMDIE) && !(gfp_mask & __GFP_NOFAIL))
 		goto nopage;
+
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+	/* Start Simple LMK right before resorting to direct compaction */
+	if (!cmpxchg(&started_slmk, false, true)) {
+		/* Elevate priority of OOM'd processes that invoke Simple LMK */
+		sched_setscheduler_nocheck(current, SCHED_FIFO, &oom_prio);
+		simple_lmk_start_reclaim();
+	}
+#endif
 
 	/*
 	 * Try direct compaction. The first pass is asynchronous. Subsequent
@@ -3313,6 +3333,12 @@ noretry:
 nopage:
 	warn_alloc_failed(gfp_mask, order, NULL);
 got_pg:
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
+	if (started_slmk) {
+		simple_lmk_stop_reclaim();
+		sched_setscheduler_nocheck(current, orig_policy, &orig_prio);
+	}
+#endif
 	return page;
 }
 
