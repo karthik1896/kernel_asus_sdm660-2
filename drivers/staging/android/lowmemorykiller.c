@@ -91,6 +91,9 @@ static unsigned long lowmem_deathpending_timeout;
 			pr_info(x);			\
 	} while (0)
 
+/* User knob to enable/disable adaptive lmk feature */
+static int enable_adaptive_lmk = 1;
+module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int, 0644);
 
 static DECLARE_WAIT_QUEUE_HEAD(event_wait);
 static DEFINE_SPINLOCK(lmk_event_lock);
