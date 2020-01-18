@@ -3469,6 +3469,8 @@ void smblib_asus_monitor_start(struct smb_charger *chg, int time)
 #define SMBCHG_FLOAT_VOLTAGE_VALUE_4P064		0x4D
 #define SMBCHG_FLOAT_VOLTAGE_VALUE_4P350		0x73
 #define SMBCHG_FLOAT_VOLTAGE_VALUE_4P357		0x74
+#define SMBCHG_FLOAT_VOLTAGE_VALUE_4P385		0x78
+#define SMBCHG_FLOAT_VOLTAGE_VALUE_4P392		0x79
 #define SMBCHG_FAST_CHG_CURRENT_VALUE_850MA 	0x22
 #define SMBCHG_FAST_CHG_CURRENT_VALUE_1400MA 	0x38
 #define SMBCHG_FAST_CHG_CURRENT_VALUE_1475MA 	0x3B
@@ -3692,9 +3694,9 @@ void jeita_rule(void)
 		break;
 	case JEITA_STATE_RANGE_0_to_100:
 		charging_enable = EN_BAT_CHG_EN_COMMAND_TRUE;
-		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P350;                   //reg=1070
-		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_2000MA;                //reg=1061
-		pr_debug("%s: 0 <= temperature < 10\n", __func__);
+		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P385;
+		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_3000MA;
+
 		rc = SW_recharge(smbchg_dev);
 		if (rc < 0) {
 			pr_err("%s: SW_recharge failed rc = %d\n", __func__, rc);
@@ -3702,9 +3704,9 @@ void jeita_rule(void)
 		break;
 	case JEITA_STATE_RANGE_100_to_500:
 		charging_enable = EN_BAT_CHG_EN_COMMAND_TRUE;
-		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P350;                   //reg=1070
-		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_3000MA;             //reg=1061
-		pr_debug("%s: 10 <= temperature < 50\n", __func__);
+		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P385;
+		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_3000MA;
+
 		rc = SW_recharge(smbchg_dev);
 		if (rc < 0) {
 			pr_err("%s: SW_recharge failed rc = %d\n", __func__, rc);
@@ -3712,9 +3714,8 @@ void jeita_rule(void)
 		break;
 	case JEITA_STATE_RANGE_500_to_600:
 		charging_enable = EN_BAT_CHG_EN_COMMAND_TRUE;
-		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P004;
-		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_2500MA;
-		pr_debug("%s: 50 <= temperature < 60\n", __func__);
+		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P385;
+		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_3000MA;
 		break;
 	case JEITA_STATE_LARGER_THAN_600:
 		charging_enable = EN_BAT_CHG_EN_COMMAND_FALSE;
@@ -3727,6 +3728,9 @@ void jeita_rule(void)
 	if (smartchg_stop_flag) {
 		pr_debug("%s: Stop charging, smart = %d\n", __func__, smartchg_stop_flag);
 		charging_enable = EN_BAT_CHG_EN_COMMAND_FALSE;
+	} else {
+		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P385;
+		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_3000MA;
 	}
 
 	rc = jeita_status_regs_write(charging_enable, FV_CFG_reg_value, FCC_reg_value);
@@ -3811,11 +3815,12 @@ void asus_chg_flow_work(struct work_struct *work)
 		smblib_asus_monitor_start(smbchg_dev, 0);		//ASUS BSP Austin_T: Jeita start
 		break;
 	case CDP_CHARGER_BIT:
-		pr_debug("asus_chg_flow_work enter CDP_CHARGER_BIT\n");
 		/* modify for CDP charging current */
-			set_icl = ICL_1500mA;
-		rc = smblib_masked_write(smbchg_dev, USBIN_CURRENT_LIMIT_CFG_REG,     //reg=1370   bit7-bit0=USBIN_CURRENT_LIMIT
-			USBIN_CURRENT_LIMIT_MASK, set_icl);
+		set_icl = ICL_3000mA;
+
+		rc = smblib_masked_write(smbchg_dev, USBIN_CURRENT_LIMIT_CFG_REG,
+						USBIN_CURRENT_LIMIT_MASK,
+						set_icl);
 		if (rc < 0)
 			pr_err("%s: Failed to set USBIN_CURRENT_LIMIT\n", __func__);
 		/* modify CDP charging current */
