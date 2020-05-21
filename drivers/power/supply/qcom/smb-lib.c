@@ -3478,6 +3478,9 @@ void smblib_asus_monitor_start(struct smb_charger *chg, int time)
 #define SMBCHG_FAST_CHG_CURRENT_VALUE_1500MA 	0x3C
 #define SMBCHG_FAST_CHG_CURRENT_VALUE_2000MA 	0x50
 #define SMBCHG_FAST_CHG_CURRENT_VALUE_2050MA 	0x52
+#define SMBCHG_FAST_CHG_CURRENT_VALUE_2500MA	0x64
+#define SMBCHG_FAST_CHG_CURRENT_VALUE_2850MA	0x72
+#define SMBCHG_FAST_CHG_CURRENT_VALUE_3000MA 	0x78
 #define SMBCHG_FAST_CHG_CURRENT_VALUE_4000MA 	0xF8
 enum JEITA_state {
 	JEITA_STATE_INITIAL,
@@ -3700,13 +3703,12 @@ void jeita_rule(void)
 		charging_enable = EN_BAT_CHG_EN_COMMAND_FALSE;
 		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P357;
 		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_1400MA;
-		pr_debug("%s: temperature < 0\n", __func__);
 		break;
 	case JEITA_STATE_RANGE_0_to_100:
 		charging_enable = EN_BAT_CHG_EN_COMMAND_TRUE;
 		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P485;
 		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_4000MA;
-
+		
 		rc = SW_recharge(smbchg_dev);
 		if (rc < 0) {
 			pr_err("%s: SW_recharge failed rc = %d\n", __func__, rc);
@@ -3731,7 +3733,6 @@ void jeita_rule(void)
 		charging_enable = EN_BAT_CHG_EN_COMMAND_FALSE;
 		FV_CFG_reg_value = SMBCHG_FLOAT_VOLTAGE_VALUE_4P004;
 		FCC_reg_value = SMBCHG_FAST_CHG_CURRENT_VALUE_1500MA;
-		pr_debug("%s: temperature >= 60\n", __func__);
 		break;
 	}
 
