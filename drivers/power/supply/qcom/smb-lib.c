@@ -3447,7 +3447,6 @@ void asus_batt_RTC_work(struct work_struct *dat)
 /************************
  * PARALLEL PSY GETTERS *
  ************************/
-#ifdef CONFIG_MACH_ASUS_X00T
 /* Realize jeita function */
 #define ICL_475mA	0x12
 #define ICL_500mA	0x13
